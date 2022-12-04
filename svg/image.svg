@@ -1,0 +1,30 @@
+<svg width='500' height='500' style='background-color:white'>
+  <text x='10' y='50'>ID: </text>
+  <text x='10' y='80'>HP: </text>
+  <text x='10' y='110'>NumberOfChild: </text>
+  <text x='10' y='140'>Feather: </text>
+  <text x='10' y='170'>Body: </text>
+  <text x='10' y='200'>Parent1: </text>
+  <text x='10' y='230'>Parent2: </text>
+  <text x='10' y='300'>D GENES</text>
+  <text x='10' y='330'>Eyes: </text>
+  <text x='10' y='360'>Ears: </text>
+  <text x='10' y='390'>Back: </text>
+  <text x='10' y='420'>Horn: </text>
+  <text x='10' y='450'>Mouth: </text>
+  <text x='10' y='480'>Tail: </text>
+  <text x='180' y='300'>R1 GENES</text>
+  <text x='180' y='330'>Eyes:  </text>
+  <text x='180' y='360'>Ears:  </text>
+  <text x='180' y='390'>Back:  </text>
+  <text x='180' y='420'>Horn:  </text>
+  <text x='180' y='450'>Mouth: </text>
+  <text x='180' y='480'>Tail:</text>
+  <text x='350' y='300'>R2 GENES</text>
+  <text x='350' y='330'>Eyes: </text>
+  <text x='350' y='360'>Ears: </text>
+  <text x='350' y='390'>Back: </text>
+  <text x='350' y='420'>Horn: </text>
+  <text x='350' y='450'>Mouth: </text>
+  <text x='350' y='480'>Tail: </text>
+</svg>
