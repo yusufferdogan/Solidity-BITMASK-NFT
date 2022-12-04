@@ -39,7 +39,15 @@ task('storage-layout', 'Prints the storage layout', async (_, hre) => {
 // Go to https://hardhat.org/config/ to learn more
 const config: HardhatUserConfig = {
   solidity: {
-    version: process.env.SOLC_VERSION || '0.8.7',
+    compilers: [
+      {
+        version: '0.8.7',
+      },
+      {
+        version: '0.8.13',
+      },
+    ],
+    version: '0.8.13',
     settings: {
       optimizer: {
         enabled:
