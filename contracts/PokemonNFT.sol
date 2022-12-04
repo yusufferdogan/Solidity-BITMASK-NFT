@@ -1,8 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0
-pragma solidity 0.8.7;
+pragma solidity ^0.8.13;
 
-import "hardhat/console.sol";
+//import "hardhat/console.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/Strings.sol";
 
+// On-Chain NFT, SVG
 contract PokemonNFT {
     uint8 public constant MAX_BIRTH = 4;
     uint256 private constant _BITMASK_ID = (1 << 64) - 1;
@@ -22,13 +25,7 @@ contract PokemonNFT {
         uint64 id;
         uint16 hp;
         // 4 uint8 = 32 bit
-        uint8 childCount;
-        uint8 feather;
-        uint8 body;
-        // bird,plant,bug,beast,reptile,aqua
-        // it determined by most part of the class
-        // if have 3 aqua part then its aqua
-        uint8 pokemonType;
+        Property property;
         //18 uint8 = 144 bit
         Gene dominant;
         Gene r1;
@@ -44,28 +41,33 @@ contract PokemonNFT {
         uint8 tail;
     }
 
-    struct Parent {
-        uint64 parentId;
-        uint64 parentId2;
+    struct Property {
+        uint8 childCount;
+        uint8 feather;
+        uint8 body;
+        // bird,plant,bug,beast,reptile,aqua
+        uint8 pokemonType;
     }
 
     // pokemon => Parents
     mapping(uint64 => uint256[2]) public parents;
 
     // pokemon => children(4 children in uint256)
-    mapping(uint256 => uint256[4]) public childrens;
+    mapping(uint256 => uint64[4]) public childrens;
 
     // wallet => pokemons
     mapping(address => uint256[]) public userPokemons;
 
+    mapping(uint256 => uint256) public pokemons;
+
     constructor() {
-        userPokemons[msg.sender].push(0x000102030405060708090a0b0c0d0e0f100807060501ffff0000000000000001);
-        userPokemons[msg.sender].push(0x00000000000000000000000000000000000000000000ffff0000000000000001);
+        userPokemons[msg.sender].push(1);
+        userPokemons[msg.sender].push(2);
     }
 
-    function getId(uint256 pokemon) public view returns (uint256) {
-        console.log(pokemon & _BITMASK_ID); // 0-63 first64Bit, print(6)
-        console.logBytes(abi.encodePacked(pokemon & _BITMASK_ID)); // 0-63 first64Bit, print(6)
+    function getId(uint256 pokemon) public pure returns (uint256) {
+        //console.log(pokemon & _BITMASK_ID); // 0-63 first64Bit, print(6)
+        //console.logBytes(abi.encodePacked(pokemon & _BITMASK_ID)); // 0-63 first64Bit, print(6)
         return pokemon & _BITMASK_ID;
     }
 
@@ -73,20 +75,11 @@ contract PokemonNFT {
         return uint16((pokemon >> _BITMASK_HP_POSITION) & _BITMASK_HP);
     }
 
-    function getProperty(uint256 pokemon)
-        public
-        pure
-        returns (
-            uint8 childCount,
-            uint8 feather,
-            uint8 body,
-            uint8 pokemonType
-        )
-    {
-        childCount = uint8((pokemon >> _BITMASK_HP_CHILD_COUNT_POSITION) & _BITMASK_GENE);
-        feather = uint8((pokemon >> (_BITMASK_HP_CHILD_COUNT_POSITION + 8)) & _BITMASK_GENE);
-        body = uint8((pokemon >> (_BITMASK_HP_CHILD_COUNT_POSITION + 16)) & _BITMASK_GENE);
-        pokemonType = uint8((pokemon >> (_BITMASK_HP_CHILD_COUNT_POSITION + 24)) & _BITMASK_GENE);
+    function getProperty(uint256 pokemon) public pure returns (Property memory property) {
+        property.childCount = uint8((pokemon >> _BITMASK_HP_CHILD_COUNT_POSITION) & _BITMASK_GENE);
+        property.feather = uint8((pokemon >> (_BITMASK_HP_CHILD_COUNT_POSITION + 8)) & _BITMASK_GENE);
+        property.body = uint8((pokemon >> (_BITMASK_HP_CHILD_COUNT_POSITION + 16)) & _BITMASK_GENE);
+        property.pokemonType = uint8((pokemon >> (_BITMASK_HP_CHILD_COUNT_POSITION + 24)) & _BITMASK_GENE);
     }
 
     function getDominantGenes(uint256 pokemon) public pure returns (Gene memory gene) {
@@ -123,7 +116,7 @@ contract PokemonNFT {
         uint8 horn,
         uint8 mouth,
         uint8 tail
-    ) public view returns (uint48 gene) {
+    ) public pure returns (uint48 gene) {
         gene =
             gene |
             uint48(eyes) |
@@ -132,7 +125,7 @@ contract PokemonNFT {
             (uint48(horn) << 24) |
             (uint48(mouth) << 32) |
             (uint48(tail) << 40);
-        console.logBytes(abi.encodePacked(gene));
+        //console.logBytes(abi.encodePacked(gene));
     }
 
     function createProperty() public view returns (uint32 property) {
@@ -143,7 +136,7 @@ contract PokemonNFT {
         // solhint-enable not-rely-on-time
 
         property = property | (feather << 8) | (body << 16) | (pokemonType << 24);
-        console.logBytes(abi.encodePacked(property));
+        //console.logBytes(abi.encodePacked(property));
     }
 
     function createPokemon(
@@ -162,10 +155,77 @@ contract PokemonNFT {
             (uint256(d) << _BITMASK_DOMINANT_GENE_POSITION) |
             (uint256(r1) << _BITMASK_R1_GENE_POSITION) |
             (uint256(r2) << _BITMASK_R2_GENE_POSITION);
-        console.logBytes(abi.encodePacked(pokemon));
+        userPokemons[msg.sender].push(id);
+        pokemons[id] = pokemon;
+        //console.logBytes(abi.encodePacked(pokemon));
     }
 
     function getPokemon(uint256 pokemon) public pure returns (bytes memory) {
         return abi.encodePacked(pokemon);
+    }
+
+    function incrementChildCount(uint256 pokemon) public pure returns (uint256) {
+        // (uint8 childCount, , , ) = getProperty(pokemon);
+        // check child count
+        return pokemon + 2**80;
+    }
+
+    function decrementHp(uint256 pokemon, uint16 amount) public pure returns (uint256) {
+        return pokemon - 2**64 * amount;
+    }
+
+    function getOnChainNFT(uint256 pokemon) public pure returns (string memory) {
+        string memory enclosing = "</text>";
+        Property memory property = getProperty(pokemon);
+        Gene memory d = getDominantGenes(pokemon);
+        Gene memory r1 = getR1Genes(pokemon);
+        Gene memory r2 = getR2Genes(pokemon);
+
+        string memory nft = string.concat(
+            "<svg width='500' height='500' style='background-color:white'>",
+            string.concat("<text x='10' y='50'>ID:", string.concat(Strings.toString(getId(pokemon)), enclosing)),
+            string.concat("<text x='10' y='80'>HP:", string.concat(Strings.toString(getHp(pokemon)), enclosing)),
+            string.concat(
+                "<text x='10' y='110'>NumberOfChild:",
+                string.concat(Strings.toString(property.childCount), enclosing)
+            ),
+            string.concat(
+                "<text x='10' y='140'>Feather:",
+                string.concat(Strings.toString(property.feather), enclosing)
+            ),
+            string.concat("<text x='10' y='170'>Body:", string.concat(Strings.toString(property.body), enclosing))
+        );
+
+        string memory nft2 = string.concat(
+            "<text x='10' y='300'>D GENES</text>",
+            string.concat("<text x='10' y='330'>Eyes:", string.concat(Strings.toString(d.eyes), enclosing)),
+            string.concat("<text x='10' y='360'>Ears:", string.concat(Strings.toString(d.ears), enclosing)),
+            string.concat("<text x='10' y='390'>Back:", string.concat(Strings.toString(d.back), enclosing)),
+            string.concat("<text x='10' y='420'>Horn:", string.concat(Strings.toString(d.horn), enclosing)),
+            string.concat("<text x='10' y='450'>Mouth:", string.concat(Strings.toString(d.mouth), enclosing)),
+            string.concat("<text x='10' y='480'>Tail:", string.concat(Strings.toString(d.tail), enclosing))
+        );
+
+        string memory nft3 = string.concat(
+            "<text x='180' y='300'>R1 GENES</text>",
+            string.concat("<text x='180' y='330'>Eyes:", string.concat(Strings.toString(r1.eyes), enclosing)),
+            string.concat("<text x='180' y='360'>Ears:", string.concat(Strings.toString(r1.ears), enclosing)),
+            string.concat("<text x='180' y='390'>Back:", string.concat(Strings.toString(r1.back), enclosing)),
+            string.concat("<text x='180' y='420'>Horn:", string.concat(Strings.toString(r1.horn), enclosing)),
+            string.concat("<text x='180' y='450'>Mouth:", string.concat(Strings.toString(r1.mouth), enclosing)),
+            string.concat("<text x='180' y='480'>Tail:", string.concat(Strings.toString(r1.tail), enclosing))
+        );
+
+        string memory nft4 = string.concat(
+            "<text x='350' y='300'>R2 GENES</text>",
+            string.concat("<text x='350' y='330'>Eyes:", string.concat(Strings.toString(r2.eyes), enclosing)),
+            string.concat("<text x='350' y='360'>Ears:", string.concat(Strings.toString(r2.ears), enclosing)),
+            string.concat("<text x='350' y='390'>Back:", string.concat(Strings.toString(r2.back), enclosing)),
+            string.concat("<text x='350' y='420'>Horn:", string.concat(Strings.toString(r2.horn), enclosing)),
+            string.concat("<text x='350' y='450'>Mouth:", string.concat(Strings.toString(r2.mouth), enclosing)),
+            string.concat("<text x='350' y='480'>Tail:", string.concat(Strings.toString(r2.tail), enclosing))
+        );
+
+        return string.concat(nft, nft2, nft3, nft4, "</svg>");
     }
 }
